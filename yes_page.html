@@ -3,15 +3,125 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Уряяяяяяя!</title>
-    <link rel="stylesheet" href="styles.css">
+    <title>Подарки для тебя!</title>
+    <style>
+        body { background-color: #fce4ec; color: #d81b60; font-family: 'Arial', sans-serif; text-align: center; margin: 0; padding: 20px; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 90vh; }
+        .hidden { display: none !important; }
+        h1 { font-size: 1.8em; margin-bottom: 30px; line-height: 1.4; }
+        
+        /* Главное меню с подарками */
+        #menu { display: flex; flex-direction: column; align-items: center; }
+        .gifts-container { display: flex; gap: 20px; flex-wrap: wrap; justify-content: center; }
+        .gift-btn { background: white; border: 2px solid #f8bbd0; border-radius: 15px; padding: 20px; cursor: pointer; width: 110px; font-size: 1.1em; font-weight: bold; color: #d81b60; transition: transform 0.2s; box-shadow: 0 4px 10px rgba(0,0,0,0.1); display: flex; flex-direction: column; align-items: center; }
+        .gift-btn:hover { transform: scale(1.1); }
+        .gift-icon { font-size: 3em; margin-bottom: 10px; }
+        
+        /* Блоки с контентом */
+        .content-section { background: white; padding: 30px; border-radius: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); max-width: 400px; width: 90%; margin-top: 20px; }
+        .back-btn { margin-top: 25px; padding: 12px 25px; background: #d81b60; color: white; border: none; border-radius: 10px; font-size: 1.1em; cursor: pointer; font-weight: bold; width: 100%;}
+        
+        /* Галерея (Подарок 1) */
+        .photo-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 20px; }
+        .photo-grid img { width: 100%; border-radius: 10px; object-fit: cover; aspect-ratio: 1 / 1; }
+        
+        /* Плеер (Подарок 2) */
+        .player-container { display: flex; flex-direction: column; align-items: center; gap: 20px; margin-top: 20px; }
+        .vinyl { width: 150px; height: 150px; border-radius: 50%; background: #222; border: 5px solid #111; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 10px rgba(0,0,0,0.3); animation: spin 4s linear infinite; animation-play-state: paused; }
+        .vinyl.playing { animation-play-state: running; }
+        .vinyl-center { width: 50px; height: 50px; background: #f8bbd0; border-radius: 50%; border: 2px solid #111; }
+        @keyframes spin { 100% { transform: rotate(360deg); } }
+        audio { width: 100%; outline: none; }
+        
+        /* Письмо (Подарок 3) */
+        .letter-text { font-family: 'Georgia', serif; font-size: 1.1em; line-height: 1.6; text-align: left; color: #444; margin-top: 15px; }
+    </style>
 </head>
 <body>
-    <div class="container">
-        <h1 class="header_text">Уряяяя!! Я знал! Жду не дождусь нашей встречи в Молдове! ❤️</h1>
-        <div class="gif_container">
-            <img src="https://media0.giphy.com/media/v1.Y2lkPTc5MGI3NjExa2F6aDF5b3d6ODZpN2RvZmo4a240cmZraTVleTI0ZWExMzB3NmI3eCZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/xR5cPyPoL5HVXSphqA/giphy.gif" alt="Cute animated illustration">
+
+    <!-- ГЛАВНОЕ МЕНЮ С ПОДАРКАМИ -->
+    <div id="menu">
+        <h1>Я знал! ❤️<br>Жду не дождусь нашей встречи в Молдове!<br><br>А теперь выбирай подарок:</h1>
+        <div class="gifts-container">
+            <button class="gift-btn" onclick="showSection('gift1')">
+                <span class="gift-icon">🎁</span> Gift 1
+            </button>
+            <button class="gift-btn" onclick="showSection('gift2')">
+                <span class="gift-icon">🎁</span> Gift 2
+            </button>
+            <button class="gift-btn" onclick="showSection('gift3')">
+                <span class="gift-icon">🎁</span> Gift 3
+            </button>
         </div>
     </div>
+
+    <!-- ПОДАРОК 1: ФОТОГРАФИИ -->
+    <div id="gift1" class="content-section hidden">
+        <h2>Наши воспоминания 📸</h2>
+        <div class="photo-grid">
+            <!-- Пока здесь картинки-заглушки, потом заменим на ваши! -->
+            <img src="https://media.tenor.com/FwFk37107T4AAAAe/bubu-dudu.png" alt="Фото 1">
+            <img src="https://media.tenor.com/b_8P0D1tPewAAAAe/bubu-dudu.png" alt="Фото 2">
+            <img src="https://media.tenor.com/pZqN-j6_tYAAAAAe/bubu-bubu-dudu.png" alt="Фото 3">
+            <img src="https://media.tenor.com/w4-Z6rYxOQsAAAAe/bubu-dudu.png" alt="Фото 4">
+        </div>
+        <button class="back-btn" onclick="showSection('menu')">Назад</button>
+    </div>
+
+    <!-- ПОДАРОК 2: МУЗЫКА -->
+    <div id="gift2" class="content-section hidden">
+        <h2>Песня о нас 🎵</h2>
+        <div class="player-container">
+            <div class="vinyl" id="vinyl-disc">
+                <div class="vinyl-center"></div>
+            </div>
+            <!-- Пока стоит стандартная музыка, потом загрузим твою -->
+            <audio id="audio-player" controls>
+                <source src="https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3" type="audio/mpeg">
+            </audio>
+        </div>
+        <button class="back-btn" onclick="showSection('menu'); stopAudio();">Назад</button>
+    </div>
+
+    <!-- ПОДАРОК 3: ПИСЬМО -->
+    <div id="gift3" class="content-section hidden">
+        <h2>Моей Юлечке 💌</h2>
+        <div class="letter-text">
+            <p>Дорогая моя,</p>
+            <p>С того момента, как ты появилась в моей жизни, всё стало ярче. Я безумно ценю каждую минуту, которую мы проводим вместе.</p>
+            <p>Я считаю дни до нашей встречи в сентябре. Обещаю, что это будет незабываемо и очень тепло.</p>
+            <p>Обнимаю крепко-крепко! ❤️</p>
+        </div>
+        <button class="back-btn" onclick="showSection('menu')">Назад</button>
+    </div>
+
+    <!-- Скрипт, который заставляет всё это работать -->
+    <script>
+        function showSection(sectionId) {
+            // Прячем все экраны
+            document.getElementById('menu').classList.add('hidden');
+            document.getElementById('gift1').classList.add('hidden');
+            document.getElementById('gift2').classList.add('hidden');
+            document.getElementById('gift3').classList.add('hidden');
+            
+            // Показываем нужный
+            document.getElementById(sectionId).classList.remove('hidden');
+            
+            // Прокручиваем страницу наверх (удобно для телефонов)
+            window.scrollTo(0, 0);
+        }
+
+        // Анимация пластинки при включении музыки
+        const audio = document.getElementById('audio-player');
+        const vinyl = document.getElementById('vinyl-disc');
+
+        audio.onplay = function() { vinyl.classList.add('playing'); };
+        audio.onpause = function() { vinyl.classList.remove('playing'); };
+
+        // Останавливаем музыку, когда нажимаем "Назад"
+        function stopAudio() {
+            audio.pause();
+            audio.currentTime = 0;
+        }
+    </script>
 </body>
 </html>
