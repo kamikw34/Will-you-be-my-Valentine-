@@ -34,11 +34,10 @@
         [0.95, `${TO} на горизонте! 🏡`],
     ];
     const OOPS = [
-        'Ой! Не сдаёмся 💪',
-        'Тучка, ну ты чего 😤',
-        'Ничего, летим дальше!',
-        'Любовь сильнее тучек!',
-        'Мишка отряхнулся и летит',
+        'Ой! Тучка победила 😤',
+        'Бум! Мишка упал 🥺',
+        'Тучка, ну ты чего!',
+        'Почти! Ещё разок?',
     ];
     const NO_TEXTS = [
         'Точно?',
@@ -433,8 +432,8 @@
     let camX = 0;
     let player, obstacles, hearts, particles, floaters;
     let msg = null, msgIdx = 0;
-    let oops = 0, collected = 0, totalHearts = 0;
-    let invul = 0, freeze = 0, safeY = 0;
+    let collected = 0, totalHearts = 0;
+    let attempts = 0, fallT = 0;
     let arrive = null;
 
     function reset() {
@@ -446,10 +445,8 @@
         floaters = [];
         msg = null;
         msgIdx = 0;
-        oops = 0;
         collected = 0;
-        invul = 0;
-        freeze = 0;
+        fallT = 0;
         arrive = null;
 
         const gy = groundY();
@@ -472,10 +469,14 @@
         totalHearts = hearts.length;
     }
 
-    const progress = () => (state === 'play' ? clamp(camX / END_X, 0, 1) : state === 'menu' ? 0 : 1);
+    const progress = () => {
+        if (state === 'menu') return 0;
+        if (state === 'play' || state === 'crashed' || state === 'gameover') return clamp(camX / END_X, 0, 1);
+        return 1;
+    };
 
     function flap() {
-        if (state !== 'play' || freeze > 0) return;
+        if (state !== 'play') return;
         player.vy = FLAP;
         sfx.flap();
         for (let i = 0; i < 3; i++) {
@@ -504,18 +505,42 @@
     }
 
     function crash() {
-        oops++;
+        state = 'crashed';
+        fallT = 0;
         sfx.crash();
-        vibrate(120);
-        freeze = 0.7;
-        invul = 2.2;
-        player.vy = 0;
-        const next = obstacles.find((o) => o.x - camX + OBS_W > player.x - HIT_R);
-        safeY = next ? (next.top + next.bottom) / 2 : H * 0.4;
+        vibrate(150);
+        player.vy = -200;
+        msg = null;
         for (let i = 0; i < 10; i++) {
             particles.push({ x: player.x, y: player.y, vx: rand(-120, 120), vy: rand(-120, 120), life: 0.6, max: 0.6, kind: 'puff', s: rand(4, 9) });
         }
-        floaters.push({ x: player.x + 20, y: player.y - 30, text: OOPS[(oops - 1) % OOPS.length], t: 1.4, c: '#fff' });
+    }
+
+    // мишка падает на землю, потом экран «заново»
+    function updateCrashed(dt) {
+        fallT += dt;
+        const floor = groundY() - PLAYER_R * 1.6;
+        player.vy = Math.min(player.vy + GRAVITY * dt, MAX_FALL);
+        player.y = Math.min(floor, player.y + player.vy * dt);
+        if (fallT > 1.0 && state === 'crashed') {
+            state = 'gameover';
+            showGameOver();
+        }
+    }
+
+    function showGameOver() {
+        const flown = Math.round(DIST_KM * clamp(camX / END_X, 0, 1));
+        let best = flown;
+        try {
+            best = Math.max(flown, Number(localStorage.getItem('sekretik-best')) || 0);
+            localStorage.setItem('sekretik-best', String(best));
+        } catch (e) { /* без рекорда */ }
+        document.getElementById('overTitle').textContent = OOPS[attempts % OOPS.length];
+        document.getElementById('overText').textContent =
+            `Пролетела ${flown} км из ${DIST_KM}. До меня осталось ${DIST_KM - flown} км.`;
+        document.getElementById('overBest').textContent = `Рекорд: ${best} км`;
+        attempts++;
+        show('gameover');
     }
 
     function updatePlay(dt) {
@@ -525,14 +550,7 @@
             msgIdx++;
         }
 
-        if (freeze > 0) {
-            freeze -= dt;
-            player.y = lerp(player.y, safeY, 1 - Math.pow(0.002, dt));
-            return;
-        }
-
         camX += (150 + 35 * p) * dt;
-        invul = Math.max(0, invul - dt);
 
         player.vy = Math.min(player.vy + GRAVITY * dt, MAX_FALL);
         player.y += player.vy * dt;
@@ -540,14 +558,14 @@
 
         const gy = groundY();
         if (player.y > gy - PLAYER_R * 1.6) {
-            if (invul > 0) { player.y = gy - PLAYER_R * 1.6; player.vy = FLAP * 0.8; }
-            else { crash(); return; }
+            crash();
+            return;
         }
 
         for (const o of obstacles) {
             const sx = o.x - camX;
             if (sx > W || sx + OBS_W < -20) continue;
-            if (invul <= 0 && (
+            if ((
                 circleRect(player.x, player.y, HIT_R, sx - 4, -50, OBS_W + 8, o.top + 50) ||
                 circleRect(player.x, player.y, HIT_R, sx - 4, o.bottom, OBS_W + 8, gy - o.bottom)
             )) {
@@ -732,10 +750,9 @@
 
         // мишка
         if (player) {
-            const blink = invul > 0 && state === 'play' && Math.floor(time * 12) % 2 === 0;
-            if (!blink) {
+            {
                 const hug = arrive && arrive.phase === 2;
-                const rot = state === 'play' ? clamp(player.vy / 700, -0.45, 0.7) : 0;
+                const rot = state === 'play' ? clamp(player.vy / 700, -0.45, 0.7) : state === 'crashed' || state === 'gameover' ? 2.6 : 0;
                 drawBear(player.x, player.y, PLAYER_R, WHITE_BEAR, { wings: hug ? undefined : player.wing, rot, hug, happy: hug });
             }
         }
@@ -769,7 +786,7 @@
         if (state !== 'menu') drawHUD(p);
         if (state === 'play') drawMessage();
 
-        if (state === 'play' && camX < 120 && freeze <= 0) {
+        if (state === 'play' && camX < 120) {
             ctx.save();
             ctx.globalAlpha = 0.6 + 0.4 * Math.sin(time * 6);
             ctx.font = 'bold 16px sans-serif';
@@ -800,6 +817,8 @@
             if (state === 'final' && Math.random() < dt * 6) burstHearts(rand(30, W - 30), H + 10, 3, 120);
         } else if (state === 'play') {
             updatePlay(dt);
+        } else if (state === 'crashed' || state === 'gameover') {
+            updateCrashed(dt);
         } else if (state === 'arrive' || state === 'question') {
             if (arrive) updateArrive(dt);
         }
@@ -809,7 +828,7 @@
     }
 
     // ---------- Экраны ----------
-    const screens = ['menu', 'question', 'final'];
+    const screens = ['menu', 'question', 'final', 'gameover'];
     function show(id) {
         for (const s of screens) document.getElementById(s).classList.toggle('show', s === id);
     }
@@ -863,7 +882,7 @@
         document.getElementById('daysText').textContent =
             days > 0 ? `Мы не виделись уже ${days} ${plural(days, 'день', 'дня', 'дней')} — с Молдовы. Я считаю каждый.` : '';
         document.getElementById('statsText').textContent =
-            `Собрано сердечек: ${collected} из ${totalHearts} — все они твои. Столкновений с тучками: ${oops}.`;
+            `Собрано сердечек: ${collected} из ${totalHearts} — все они твои. Попыток: ${attempts + 1}.`;
         show('final');
     });
 
@@ -875,7 +894,8 @@
     }
 
     document.getElementById('startBtn').addEventListener('click', startGame);
-    document.getElementById('againBtn').addEventListener('click', startGame);
+    document.getElementById('againBtn').addEventListener('click', () => { attempts = 0; startGame(); });
+    document.getElementById('retryBtn').addEventListener('click', startGame);
 
     cv.addEventListener('pointerdown', (e) => { e.preventDefault(); flap(); });
     window.addEventListener('keydown', (e) => {
@@ -887,5 +907,5 @@
     requestAnimationFrame(frame);
 
     // для проверки в браузере: window.__secret.skip() — перелететь почти в конец
-    window.__secret = { skip: () => { camX = END_X - 300; obstacles.forEach((o) => { if (o.x < camX + W) o.passed = true; }); invul = 3; } };
+    window.__secret = { skip: () => { camX = END_X - 300; obstacles = obstacles.filter((o) => o.x > camX + W); } };
 })();
