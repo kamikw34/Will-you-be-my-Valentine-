@@ -100,7 +100,7 @@
         try { audio = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { audio = null; }
     }
     function beep(freq, dur = 0.08, type = 'sine', vol = 0.05, slide = 1) {
-        if (!audio) return;
+        if (!audio || muted) return;
         const now = audio.currentTime;
         const o = audio.createOscillator(), g = audio.createGain();
         o.type = type;
@@ -118,6 +118,39 @@
         crash: () => beep(180, 0.3, 'sawtooth', 0.04, 0.5),
         win: () => [523, 659, 784, 1047].forEach((f, i) => setTimeout(() => beep(f, 0.22, 'sine', 0.06), i * 140)),
     };
+    // ---------- Музыка ----------
+    const music = new Audio('music.mp3');
+    music.loop = true;
+    music.volume = 0.45;
+    let muted = false;
+    try { muted = localStorage.getItem('sekretik-muted') === '1'; } catch (e) { /* по умолчанию со звуком */ }
+    let musicStarted = false;
+
+    function playMusic() {
+        musicStarted = true;
+        if (!muted && !document.hidden) music.play().catch(() => {});
+    }
+
+    const muteBtn = document.getElementById('muteBtn');
+    function updateMuteBtn() {
+        muteBtn.textContent = muted ? '🔇' : '🎵';
+        muteBtn.setAttribute('aria-label', muted ? 'Включить звук' : 'Выключить звук');
+    }
+    muteBtn.addEventListener('click', () => {
+        muted = !muted;
+        try { localStorage.setItem('sekretik-muted', muted ? '1' : '0'); } catch (e) { /* не запомним */ }
+        if (muted) music.pause();
+        else playMusic();
+        updateMuteBtn();
+    });
+    updateMuteBtn();
+
+    // приложение свернули или открыли снова (на Android приходят app-pause / app-resume)
+    const pauseMusic = () => music.pause();
+    const resumeMusic = () => { if (musicStarted) playMusic(); };
+    document.addEventListener('app-pause', pauseMusic);
+    document.addEventListener('app-resume', resumeMusic);
+
     const vibrate = (ms) => { try { navigator.vibrate && navigator.vibrate(ms); } catch (e) { /* нет вибро */ } };
 
     // ---------- Рисование ----------
@@ -836,6 +869,7 @@
     function startGame() {
         initAudio();
         if (audio && audio.state === 'suspended') audio.resume();
+        if (music.paused) playMusic();
         reset();
         resetNoButton();
         state = 'play';
@@ -901,7 +935,11 @@
     window.addEventListener('keydown', (e) => {
         if (e.code === 'Space' || e.code === 'ArrowUp') { e.preventDefault(); flap(); }
     });
-    document.addEventListener('visibilitychange', () => { last = performance.now(); });
+    document.addEventListener('visibilitychange', () => {
+        last = performance.now();
+        if (document.hidden) pauseMusic();
+        else resumeMusic();
+    });
 
     reset();
     requestAnimationFrame(frame);

@@ -51,6 +51,7 @@ public class MainActivity extends Activity {
 
     @Override
     protected void onPause() {
+        webView.evaluateJavascript("document.dispatchEvent(new Event('app-pause'))", null);
         webView.onPause();
         super.onPause();
     }
@@ -59,5 +60,6 @@ public class MainActivity extends Activity {
     protected void onResume() {
         super.onResume();
         webView.onResume();
+        webView.evaluateJavascript("document.dispatchEvent(new Event('app-resume'))", null);
     }
 }
