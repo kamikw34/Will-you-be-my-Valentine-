@@ -6,7 +6,6 @@
     const FROM = 'Щелкун';
     const TO = 'Березне';
     const DIST_KM = 2312;
-    const LAST_MEETING = new Date(2026, 8, 15); // 15 сентября, Молдова
 
     const OBSTACLES = 30;
     const SPACING = 235;
@@ -296,9 +295,11 @@
         ctx.restore();
     }
 
-    function drawCloudColumn(sx, y0, y1, capAtBottom, night) {
-        const fill = night > 0.5 ? '#d9cff0' : '#f6f1ff';
-        const line = '#a995d6';
+    // mood: -1 — злая тучка в начале пути, 1 — счастливая у финиша
+    function drawCloudColumn(sx, y0, y1, capAtBottom, night, mood) {
+        const happy = smooth(0.2, 1, mood);
+        const fill = mixColor(night > 0.5 ? '#d9cff0' : '#f6f1ff', '#ffe3ef', happy);
+        const line = mixColor('#a995d6', '#e895b8', happy);
         if (y1 - y0 < 4) return;
         ctx.save();
         ctx.fillStyle = fill;
@@ -330,15 +331,48 @@
         ctx.fill();
 
         const fy = cy + (capAtBottom ? 6 : -6);
-        ctx.fillStyle = '#5b4a7a';
-        ctx.beginPath();
-        ctx.arc(cx - 8, fy - 2, 2.6, 0, Math.PI * 2);
-        ctx.arc(cx + 8, fy - 2, 2.6, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.strokeStyle = '#5b4a7a';
+        const ink = '#5b4a7a';
+        ctx.fillStyle = ink;
+        ctx.strokeStyle = ink;
         ctx.lineWidth = 2;
+
+        // щёчки у радостных
+        if (mood > 0.3) {
+            ctx.fillStyle = `rgba(255,120,160,${0.6 * smooth(0.3, 0.8, mood)})`;
+            ctx.beginPath();
+            ctx.ellipse(cx - 15, fy + 5, 4.5, 2.8, 0, 0, Math.PI * 2);
+            ctx.ellipse(cx + 15, fy + 5, 4.5, 2.8, 0, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.fillStyle = ink;
+        }
+
+        // глазки: у самых счастливых — дужки ^ ^
         ctx.beginPath();
-        ctx.arc(cx, fy + 9, 5, Math.PI * 1.15, Math.PI * 1.85);
+        if (mood > 0.75) {
+            ctx.arc(cx - 8, fy, 3.2, Math.PI * 1.15, Math.PI * 1.85);
+            ctx.moveTo(cx + 8 + 3.2 * Math.cos(Math.PI * 1.15), fy + 3.2 * Math.sin(Math.PI * 1.15));
+            ctx.arc(cx + 8, fy, 3.2, Math.PI * 1.15, Math.PI * 1.85);
+            ctx.stroke();
+        } else {
+            ctx.arc(cx - 8, fy - 2, 2.6, 0, Math.PI * 2);
+            ctx.arc(cx + 8, fy - 2, 2.6, 0, Math.PI * 2);
+            ctx.fill();
+        }
+
+        // сердитые бровки в начале пути
+        if (mood < -0.4) {
+            ctx.beginPath();
+            ctx.moveTo(cx - 12, fy - 9);
+            ctx.lineTo(cx - 4, fy - 6);
+            ctx.moveTo(cx + 12, fy - 9);
+            ctx.lineTo(cx + 4, fy - 6);
+            ctx.stroke();
+        }
+
+        // ротик: от грустной дуги к улыбке
+        ctx.beginPath();
+        ctx.moveTo(cx - 6, fy + 6);
+        ctx.quadraticCurveTo(cx, fy + 6 + 8 * mood, cx + 6, fy + 6);
         ctx.stroke();
         ctx.restore();
     }
@@ -482,7 +516,7 @@
     let camX = 0;
     let player, obstacles, hearts, particles, floaters;
     let msg = null, msgIdx = 0;
-    let collected = 0, totalHearts = 0;
+    let collected = 0;
     let attempts = 0, fallT = 0;
     let arrive = null;
 
@@ -516,7 +550,6 @@
                 hearts.push({ x: a.x + OBS_W / 2 + SPACING / 2, y, got: false });
             }
         }
-        totalHearts = hearts.length;
     }
 
     const progress = () => {
@@ -771,8 +804,9 @@
         for (const o of obstacles) {
             const sx = o.x - camX;
             if (sx > W + 40 || sx + OBS_W < -40) continue;
-            drawCloudColumn(sx, -20, o.top, true, night);
-            drawCloudColumn(sx, o.bottom, groundY(), false, night);
+            const mood = lerp(-1, 1, o.x / END_X);
+            drawCloudColumn(sx, -20, o.top, true, night, mood);
+            drawCloudColumn(sx, o.bottom, groundY(), false, night, mood);
         }
 
         // домик в Березне и мишка, который ждёт
@@ -963,21 +997,8 @@
         sfx.win();
         vibrate([80, 50, 80, 50, 160]);
         burstHearts(W / 2, H * 0.6, 40, 220);
-
-        const days = Math.floor((Date.now() - LAST_MEETING.getTime()) / 86400000);
-        document.getElementById('daysText').textContent =
-            days > 0 ? `Мы не виделись уже ${days} ${plural(days, 'день', 'дня', 'дней')} — с Молдовы. Я считаю каждый.` : '';
-        document.getElementById('statsText').textContent =
-            `Собрано сердечек: ${collected} из ${totalHearts} — все они твои. Попыток: ${attempts + 1}.`;
         show('final');
     });
-
-    function plural(n, one, few, many) {
-        const m10 = n % 10, m100 = n % 100;
-        if (m10 === 1 && m100 !== 11) return one;
-        if (m10 >= 2 && m10 <= 4 && (m100 < 12 || m100 > 14)) return few;
-        return many;
-    }
 
     document.getElementById('startBtn').addEventListener('click', startGame);
     document.getElementById('againBtn').addEventListener('click', () => { attempts = 0; startGame(); });
