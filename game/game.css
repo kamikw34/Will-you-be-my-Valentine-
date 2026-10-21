@@ -126,6 +126,7 @@ p {
     font: inherit;
     font-size: 18px;
     font-weight: 700;
+    white-space: nowrap;
     cursor: pointer;
     transition: transform 0.25s ease;
 }
@@ -148,10 +149,25 @@ p {
     box-shadow: 0 4px 0 #c9b6c4;
 }
 
-.btn-no.runaway {
+.btn-yes.big {
+    transform: scale(1.5);
+}
+
+.btn-yes.big:active {
+    transform: scale(1.5) translateY(3px);
+}
+
+.btn-no.gone {
+    transform: scale(0);
+    opacity: 0;
+    transition: transform 0.25s ease, opacity 0.25s ease;
+}
+
+.shard {
     position: fixed;
-    z-index: 10;
-    transition: left 0.2s ease, top 0.2s ease, transform 0.2s ease;
+    z-index: 30;
+    border-radius: 3px;
+    pointer-events: none;
 }
 
 @keyframes fade {

@@ -24,29 +24,20 @@
     const HOME_X = END_X + 220;
 
     const MILESTONES = [
-        [0.0, `Взлетаем! Лети ко мне, ${NAME}`],
-        [0.06, 'Пока-пока, Уральские горы! ⛰️'],
-        [0.15, 'Уже 350 км! Скучаю чуть меньше'],
+        [0.0, 'Лети ко мне, милая'],
+        [0.06, 'Пока-пока, Урал'],
+        [0.15, 'Давай-давай, ухылянтик, ты сбежишь'],
         [0.33, 'Треть пути! Помнишь Молдову? 11–15 сентября'],
-        [0.5, 'Половина! Я тебя очень жду 🥺'],
-        [0.68, 'Переводим часы на пару часов назад ⏰'],
-        [0.84, 'Я уже жду тебя! 🧸'],
-        [0.95, `${TO} на горизонте! 🏡`],
+        [0.5, 'Я тебя жду, моя принцесса'],
+        [0.68, 'Переводим часы на пару часов назад'],
+        [0.84, 'Рыбонька, давай'],
+        [0.95, `${TO} на горизонте!`],
     ];
     const OOPS = [
-        'Ой! Тучка победила 😤',
-        'Бум! Мишка упал 🥺',
-        'Тучка, ну ты чего!',
-        'Почти! Ещё разок?',
-    ];
-    const NO_TEXTS = [
-        'Точно?',
-        'Подумай ещё 🥺',
-        'Целых 2312 км!',
-        'Мишка обидится',
-        'Ну пожааалуйста',
-        'Кнопка сломалась',
-        'Нет',
+        'Ну ёмаё, давай ещё',
+        'АААААА',
+        'Милая, постарайся ещё цють-цють',
+        'Пупупу',
     ];
 
     // ---------- Холст ----------
@@ -642,7 +633,7 @@
                 collected++;
                 sfx.heart();
                 burstHearts(sx, h.y, 6, 80);
-                floaters.push({ x: sx, y: h.y - 20, text: '+1 💗', t: 0.9, c: '#ff4f8b' });
+                floaters.push({ x: sx, y: h.y - 20, text: '+1', t: 0.9, c: '#ff4f8b' });
             }
         }
 
@@ -739,9 +730,10 @@
         ctx.textAlign = 'center';
         ctx.fillStyle = '#7a4a66';
         const left = Math.round(DIST_KM * (1 - p));
-        ctx.fillText(left > 0 ? `осталось ${left} км` : 'долетели! 💖', W / 2, y + 22);
+        ctx.fillText(left > 0 ? `осталось ${left} км` : 'долетели!', W / 2, y + 22);
         ctx.textAlign = 'right';
-        ctx.fillText(`💗 ${collected}`, W - 18, y + 22);
+        ctx.fillText(String(collected), W - 18, y + 22);
+        drawHeart(W - 28 - ctx.measureText(String(collected)).width, y + 18, 10, '#ff4f8b');
         ctx.restore();
     }
 
@@ -853,8 +845,8 @@
             ctx.fillStyle = '#fff';
             ctx.strokeStyle = 'rgba(80,30,60,0.5)';
             ctx.lineWidth = 3;
-            ctx.strokeText('👆 Тапай по экрану!', W / 2, H * 0.62);
-            ctx.fillText('👆 Тапай по экрану!', W / 2, H * 0.62);
+            ctx.strokeText('Тапай по экрану!', W / 2, H * 0.62);
+            ctx.fillText('Тапай по экрану!', W / 2, H * 0.62);
             ctx.restore();
         }
     }
@@ -900,40 +892,77 @@
         music.currentTime = 0;
         playMusic();
         reset();
-        resetNoButton();
+        setQuestion(0);
         state = 'play';
         show(null);
     }
 
+    // ---------- Вопросы ----------
+    const QUESTIONS = [
+        { text: 'Милая моя, ты будешь со мной в перемоге и зрадости?', no: 'Нет', explode: true },
+        { text: 'Пошли в бравл старс?', no: 'Не, не хочу щас', explode: false },
+    ];
+    const qText = document.getElementById('qText');
     const noBtn = document.getElementById('noBtn');
     const yesBtn = document.getElementById('yesBtn');
-    let noCount = 0;
+    const noBoom = new Audio('sfx/net-idi-na.mp3');
+    let qStep = 0;
 
-    function resetNoButton() {
-        noCount = 0;
-        noBtn.textContent = 'Нет';
-        noBtn.classList.remove('runaway');
-        noBtn.style.left = noBtn.style.top = noBtn.style.transform = '';
-        yesBtn.style.transform = '';
+    function setQuestion(i) {
+        qStep = i;
+        qText.textContent = QUESTIONS[i].text;
+        noBtn.textContent = QUESTIONS[i].no;
+        noBtn.hidden = false;
+        noBtn.classList.remove('gone');
+        yesBtn.classList.remove('big');
     }
 
-    function dodge(e) {
-        if (e) e.preventDefault();
-        noCount++;
-        noBtn.textContent = NO_TEXTS[Math.min(noCount - 1, NO_TEXTS.length - 1)];
-        noBtn.classList.add('runaway');
-        const shrink = Math.max(0.45, 1 - noCount * 0.08);
-        const bw = noBtn.offsetWidth * shrink, bh = noBtn.offsetHeight * shrink;
-        noBtn.style.left = rand(10, window.innerWidth - bw - 10) + 'px';
-        noBtn.style.top = rand(10, window.innerHeight - bh - 10) + 'px';
-        noBtn.style.transform = `scale(${shrink})`;
-        yesBtn.style.transform = `scale(${Math.min(1.8, 1 + noCount * 0.12)})`;
-        vibrate(30);
+    // кнопка «Нет» разлетается на кусочки
+    function explode(btn) {
+        const r = btn.getBoundingClientRect();
+        const cx = r.left + r.width / 2, cy = r.top + r.height / 2;
+        const colors = ['#ff4f8b', '#ffb3c9', '#e9dde6', '#7a5a6e', '#ffd35c'];
+        for (let i = 0; i < 40; i++) {
+            const bit = document.createElement('div');
+            bit.className = 'shard';
+            const size = rand(9, 20);
+            bit.style.cssText = `left:${cx}px;top:${cy}px;width:${size}px;height:${size}px;background:${colors[i % colors.length]}`;
+            document.body.appendChild(bit);
+            const a = rand(0, Math.PI * 2), d = rand(90, 240);
+            bit.animate([
+                { transform: 'translate(-50%,-50%) scale(1)', opacity: 1 },
+                { transform: `translate(calc(-50% + ${Math.cos(a) * d}px), calc(-50% + ${Math.sin(a) * d}px)) scale(0.3) rotate(${rand(-360, 360)}deg)`, opacity: 0 },
+            ], { duration: rand(700, 1100), easing: 'cubic-bezier(.2,.8,.3,1)' }).onfinish = () => bit.remove();
+        }
+        const card = btn.closest('.card');
+        card.animate([
+            { transform: 'translateX(0)' }, { transform: 'translateX(-8px)' }, { transform: 'translateX(8px)' },
+            { transform: 'translateX(-5px)' }, { transform: 'translateX(0)' },
+        ], { duration: 300 });
+        btn.hidden = true;
     }
-    noBtn.addEventListener('pointerdown', dodge);
+
+    noBtn.addEventListener('click', () => {
+        if (QUESTIONS[qStep].explode) {
+            explode(noBtn);
+            vibrate([40, 30, 120]);
+            if (!muted) {
+                noBoom.currentTime = 0;
+                noBoom.play().catch(() => {});
+            }
+        } else {
+            noBtn.classList.add('gone');
+            setTimeout(() => { noBtn.hidden = true; }, 250);
+        }
+        yesBtn.classList.add('big');
+    });
 
     yesBtn.addEventListener('click', () => {
-        noBtn.classList.remove('runaway');
+        if (qStep < QUESTIONS.length - 1) {
+            sfx.heart();
+            setQuestion(qStep + 1);
+            return;
+        }
         state = 'final';
         arrive = null;
         player.x = PLAYER_X;
