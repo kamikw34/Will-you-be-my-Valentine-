@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="theme-color" content="#2a1838">
+    <title>Секретик</title>
+    <link rel="stylesheet" href="game.css">
+</head>
+<body>
+    <canvas id="game"></canvas>
+
+    <div id="menu" class="overlay show">
+        <div class="card">
+            <div class="title">Секретик</div>
+            <div class="subtitle">(точно не вирус)</div>
+            <div class="big-heart">💌</div>
+            <h2>Долети до меня</h2>
+            <p>Юлечка, лети ко мне: из <b>Щелкуна</b> в <b>Березне</b>.<br>Между нами 2312 км и куча тучек.</p>
+            <p class="hint">Нажимай на экран, чтобы мишка махал крылышками</p>
+            <button id="startBtn" class="btn btn-yes">Полетели! ✈️</button>
+        </div>
+    </div>
+
+    <div id="question" class="overlay">
+        <div class="card">
+            <div class="big-heart">🧸💖🧸</div>
+            <h2>Юлечка, будешь моей Валентинкой?</h2>
+            <div class="buttons">
+                <button id="yesBtn" class="btn btn-yes">Да 💖</button>
+                <button id="noBtn" class="btn btn-no">Нет</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="final" class="overlay">
+        <div class="card">
+            <div class="title">Ура!!! 💖</div>
+            <p class="lead">Ты сказала «да»! 🥰</p>
+            <p>Ты пролетела 2312 км ко мне. Это совсем немного, когда любишь.</p>
+            <p id="daysText"></p>
+            <p id="statsText" class="hint"></p>
+            <p>Скоро увидимся. Обещаю.</p>
+            <button id="againBtn" class="btn btn-yes">Ещё разок ✈️</button>
+        </div>
+    </div>
+
+    <script src="game.js"></script>
+</body>
+</html>
