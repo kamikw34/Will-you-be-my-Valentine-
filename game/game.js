@@ -516,7 +516,7 @@
     let camX = 0;
     let player, obstacles, hearts, particles, floaters;
     let msg = null, msgIdx = 0;
-    let collected = 0;
+    let collected = 0, totalHearts = 0;
     let attempts = 0, fallT = 0;
     let arrive = null;
 
@@ -550,6 +550,7 @@
                 hearts.push({ x: a.x + OBS_W / 2 + SPACING / 2, y, got: false });
             }
         }
+        totalHearts = hearts.length;
     }
 
     const progress = () => {
@@ -571,15 +572,46 @@
         msg = { text, t: dur, max: dur };
     }
 
-    function burstHearts(x, y, n, spread = 140) {
+    const PINK = ['#ff4f8b', '#ff8fb4', '#ffb3c9', '#e8577e'];
+    const GOLD = ['#ffd35c', '#ffb800', '#fff1a8', '#ff9f1c'];
+
+    function burstHearts(x, y, n, spread = 140, colors = PINK) {
         for (let i = 0; i < n; i++) {
             particles.push({
                 x, y,
                 vx: rand(-spread, spread), vy: rand(-spread * 1.4, -spread * 0.2),
                 life: rand(0.9, 1.6), max: 1.6, kind: 'heart', s: rand(8, 15),
-                c: ['#ff4f8b', '#ff8fb4', '#ffb3c9', '#e8577e'][i % 4],
+                c: colors[i % colors.length],
             });
         }
+    }
+
+    const allHearts = () => totalHearts > 0 && collected === totalHearts;
+
+    function drawCrown(x, y, s) {
+        ctx.save();
+        ctx.translate(x, y);
+        ctx.beginPath();
+        ctx.moveTo(-s, 0);
+        ctx.lineTo(-s, -s * 0.9);
+        ctx.lineTo(-s * 0.5, -s * 0.35);
+        ctx.lineTo(0, -s * 1.1);
+        ctx.lineTo(s * 0.5, -s * 0.35);
+        ctx.lineTo(s, -s * 0.9);
+        ctx.lineTo(s, 0);
+        ctx.closePath();
+        ctx.fillStyle = '#ffd35c';
+        ctx.fill();
+        ctx.lineWidth = 1.6;
+        ctx.strokeStyle = '#c98a00';
+        ctx.stroke();
+        ctx.fillStyle = '#ff4f8b';
+        for (const px of [-s, 0, s]) {
+            ctx.beginPath();
+            ctx.arc(px, px === 0 ? -s * 1.1 : -s * 0.9, s * 0.18, 0, Math.PI * 2);
+            ctx.fill();
+        }
+        ctx.restore();
     }
 
     function circleRect(cx, cy, r, rx, ry, rw, rh) {
@@ -765,8 +797,10 @@
         const left = Math.round(DIST_KM * (1 - p));
         ctx.fillText(left > 0 ? `осталось ${left} км` : 'долетели!', W / 2, y + 22);
         ctx.textAlign = 'right';
-        ctx.fillText(String(collected), W - 18, y + 22);
-        drawHeart(W - 28 - ctx.measureText(String(collected)).width, y + 18, 10, '#ff4f8b');
+        const count = `${collected} / ${totalHearts}`;
+        ctx.fillStyle = allHearts() ? '#c98a00' : '#7a4a66';
+        ctx.fillText(count, W - 18, y + 22);
+        drawHeart(W - 28 - ctx.measureText(count).width, y + 18, 10, allHearts() ? '#ffb800' : '#ff4f8b');
         ctx.restore();
     }
 
@@ -839,6 +873,8 @@
                 const hug = arrive && arrive.phase === 2;
                 const rot = state === 'play' ? clamp(player.vy / 700, -0.45, 0.7) : state === 'crashed' || state === 'gameover' ? 2.6 : 0;
                 drawBear(player.x, player.y, PLAYER_R, WHITE_BEAR, { wings: hug ? undefined : player.wing, rot, hug, happy: hug });
+                // корона — награда за все сердечки
+                if (allHearts() && state !== 'play') drawCrown(player.x, player.y - PLAYER_R * 0.95, PLAYER_R * 0.6);
             }
         }
 
@@ -899,7 +935,7 @@
         if (state === 'menu' || state === 'final') {
             camX += 40 * dt;
             if (player) player.y = H * 0.42 + Math.sin(time * 2.2) * 10;
-            if (state === 'final' && Math.random() < dt * 6) burstHearts(rand(30, W - 30), H + 10, 3, 120);
+            if (state === 'final' && Math.random() < dt * 6) burstHearts(rand(30, W - 30), H + 10, 3, 120, allHearts() ? GOLD : PINK);
         } else if (state === 'play') {
             updatePlay(dt);
         } else if (state === 'crashed' || state === 'gameover') {
@@ -913,7 +949,7 @@
     }
 
     // ---------- Экраны ----------
-    const screens = ['menu', 'question', 'final', 'gameover'];
+    const screens = ['menu', 'question', 'final', 'gameover', 'secret'];
     function show(id) {
         for (const s of screens) document.getElementById(s).classList.toggle('show', s === id);
     }
@@ -996,12 +1032,24 @@
         player.x = PLAYER_X;
         sfx.win();
         vibrate([80, 50, 80, 50, 160]);
-        burstHearts(W / 2, H * 0.6, 40, 220);
+        const secret = allHearts();
+        burstHearts(W / 2, H * 0.6, secret ? 80 : 40, 220, secret ? GOLD : PINK);
+        document.getElementById('secretBtn').hidden = !secret;
+        document.getElementById('heartsHint').hidden = secret;
+        document.getElementById('heartsHint').textContent =
+            `Собрано сердечек: ${collected} из ${totalHearts}. Собери все — откроется секрет`;
         show('final');
     });
 
     document.getElementById('startBtn').addEventListener('click', startGame);
     document.getElementById('againBtn').addEventListener('click', () => { attempts = 0; startGame(); });
+    document.getElementById('secretAgainBtn').addEventListener('click', () => { attempts = 0; startGame(); });
+    document.getElementById('secretBtn').addEventListener('click', () => {
+        sfx.win();
+        vibrate([60, 40, 60, 40, 200]);
+        for (let i = 0; i < 5; i++) setTimeout(() => burstHearts(rand(60, W - 60), rand(H * 0.3, H * 0.7), 30, 200, GOLD), i * 250);
+        show('secret');
+    });
     document.getElementById('retryBtn').addEventListener('click', startGame);
 
     cv.addEventListener('pointerdown', (e) => { e.preventDefault(); flap(); });
