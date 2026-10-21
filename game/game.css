@@ -157,12 +157,6 @@ p {
     transform: scale(1.5) translateY(3px);
 }
 
-.btn-no.gone {
-    transform: scale(0);
-    opacity: 0;
-    transition: transform 0.25s ease, opacity 0.25s ease;
-}
-
 .shard {
     position: fixed;
     z-index: 30;

@@ -899,8 +899,8 @@
 
     // ---------- Вопросы ----------
     const QUESTIONS = [
-        { text: 'Милая моя, ты будешь со мной в перемоге и зрадости?', no: 'Нет', explode: true },
-        { text: 'Пошли в бравл старс?', no: 'Не, не хочу щас', explode: false },
+        { text: 'Милая моя, ты будешь со мной в перемоге и зрадости?', no: 'Нет' },
+        { text: 'Пошли в бравл старс?', no: 'Не, не хочу щас' },
     ];
     const qText = document.getElementById('qText');
     const noBtn = document.getElementById('noBtn');
@@ -913,7 +913,6 @@
         qText.textContent = QUESTIONS[i].text;
         noBtn.textContent = QUESTIONS[i].no;
         noBtn.hidden = false;
-        noBtn.classList.remove('gone');
         yesBtn.classList.remove('big');
     }
 
@@ -943,16 +942,11 @@
     }
 
     noBtn.addEventListener('click', () => {
-        if (QUESTIONS[qStep].explode) {
-            explode(noBtn);
-            vibrate([40, 30, 120]);
-            if (!muted) {
-                noBoom.currentTime = 0;
-                noBoom.play().catch(() => {});
-            }
-        } else {
-            noBtn.classList.add('gone');
-            setTimeout(() => { noBtn.hidden = true; }, 250);
+        explode(noBtn);
+        vibrate([40, 30, 120]);
+        if (!muted) {
+            noBoom.currentTime = 0;
+            noBoom.play().catch(() => {});
         }
         yesBtn.classList.add('big');
     });
