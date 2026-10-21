@@ -115,7 +115,6 @@
     const sfx = {
         flap: () => beep(520, 0.07, 'triangle', 0.04, 1.4),
         heart: () => { beep(880, 0.1, 'sine', 0.05); setTimeout(() => beep(1320, 0.14, 'sine', 0.05), 70); },
-        crash: () => beep(180, 0.3, 'sawtooth', 0.04, 0.5),
         win: () => [523, 659, 784, 1047].forEach((f, i) => setTimeout(() => beep(f, 0.22, 'sine', 0.06), i * 140)),
     };
     // ---------- Музыка ----------
@@ -139,14 +138,41 @@
     muteBtn.addEventListener('click', () => {
         muted = !muted;
         try { localStorage.setItem('sekretik-muted', muted ? '1' : '0'); } catch (e) { /* не запомним */ }
-        if (muted) music.pause();
+        if (muted) { music.pause(); stopFail(); }
         else playMusic();
         updateMuteBtn();
     });
     updateMuteBtn();
 
+    // ---------- Звуки проигрыша (случайный при каждом падении) ----------
+    const FAIL_SOUNDS = ['otryzhka', 'armatura', 'buzzer', 'imbo', 'goida', 'lobotomy', 'net-idi-na', 'gudok']
+        .map((name) => {
+            const a = new Audio(`sfx/${name}.mp3`);
+            a.preload = 'auto';
+            a.addEventListener('ended', () => { music.volume = 0.45; });
+            return a;
+        });
+    let failSound = null, lastFail = -1;
+
+    function playFail() {
+        if (muted) return;
+        let i = Math.floor(Math.random() * FAIL_SOUNDS.length);
+        if (i === lastFail) i = (i + 1) % FAIL_SOUNDS.length;
+        lastFail = i;
+        failSound = FAIL_SOUNDS[i];
+        failSound.currentTime = 0;
+        music.volume = 0.12; // приглушаем песню, чтобы звук было слышно
+        failSound.play().catch(() => { music.volume = 0.45; });
+    }
+
+    function stopFail() {
+        if (failSound) failSound.pause();
+        failSound = null;
+        music.volume = 0.45;
+    }
+
     // приложение свернули или открыли снова (на Android приходят app-pause / app-resume)
-    const pauseMusic = () => music.pause();
+    const pauseMusic = () => { music.pause(); stopFail(); };
     const resumeMusic = () => { if (musicStarted) playMusic(); };
     document.addEventListener('app-pause', pauseMusic);
     document.addEventListener('app-resume', resumeMusic);
@@ -540,7 +566,7 @@
     function crash() {
         state = 'crashed';
         fallT = 0;
-        sfx.crash();
+        playFail();
         vibrate(150);
         player.vy = -200;
         msg = null;
@@ -869,6 +895,7 @@
     function startGame() {
         initAudio();
         if (audio && audio.state === 'suspended') audio.resume();
+        stopFail();
         // каждая новая попытка — песня с начала
         music.currentTime = 0;
         playMusic();
