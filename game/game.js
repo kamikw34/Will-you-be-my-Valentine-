@@ -869,7 +869,9 @@
     function startGame() {
         initAudio();
         if (audio && audio.state === 'suspended') audio.resume();
-        if (music.paused) playMusic();
+        // каждая новая попытка — песня с начала
+        music.currentTime = 0;
+        playMusic();
         reset();
         resetNoButton();
         state = 'play';
